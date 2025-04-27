@@ -1,0 +1,36 @@
+# Ignore Helm chart archives (created when you run `helm package`)
+*.tgz
+
+# Ignore local Helm config/cache directories
+.helm/
+.helmignore
+
+# Kubernetes config (if accidentally added)
+.kube/
+
+# Logs
+*.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE configs
+.vscode/
+.idea/
+*.swp
+
+# Secrets or environment-specific overrides
+secrets.yaml
+*.secret.yaml
+.env
+*.env.*
+
+# Node/Python/Venvs (if your chart includes app code)
+node_modules/
+venv/
+__pycache__/
+
+# Temporary files
+*.bak
+*.tmp
