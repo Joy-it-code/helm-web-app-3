@@ -1,35 +1,29 @@
 # 🚀 Integrating Helm with CI/CD using Jenkins
 
-This project demonstrates how to deploy a Kubernetes application using a customized Helm chart, and then automate the deployment using a Jenkins pipeline set up on an AWS EC2 instance.
+## 📚 Project Overview
 
-The goal is to practice Kubernetes packaging (Helm) and CI/CD automation (Jenkins) in real-world scenarios.
+This project demonstrates how to set up a CI/CD pipeline using Jenkins to automate the deployment of a Kubernetes application managed through Helm charts.
+The goal is to automatically update and deploy the application every time new changes are pushed to a Git repository.
+
 ---
 
 
-## 📦 Project Overview
 
- This project helps to package a Kubernetes application using Helm and automate its deployment with Jenkins CI/CD pipelines on an AWS EC2 instance.
+## 🛠️ Prerequisites
 
-I will:
++ A computer system
 
-- Customize a Helm chart to deploy an Nginx-based application.
++ Basic knowledge of Git, Helm, Kubernetes, and Jenkins
 
-- Manually deploy using Helm and Kubernetes.
++ Helm installed on your system
 
-- Set up Jenkins as a CI/CD server on an AWS EC2 machine.
++ Kubernetes cluster ready (e.g., Minikube)
 
-- Automate the Helm deployments via a Jenkins pipeline triggered by Git pushes.
++ Jenkins installed on your system
+
 ---
 
-## 🧰 Before starting Jenkins, make sure:
 
-- You have an AWS EC2 instance (Ubuntu preferred) ready.
-
-- You already installed kubectl, helm, and connected to your Kubernetes cluster.
-
-- Your Helm chart is working locally.
-
---- 
 
 ## 📁 Project Structure
 ```
@@ -44,61 +38,168 @@ helm-web-app/
 ---
 
 
-## 🏗️ Step 1: Install Jenkins on AWS EC2 Instance
 
-### 1.1 Connect to Your EC2
+## 📥 Step-by-Step Setup
+
+### 1: Install Java
+
+Jenkins requires Java to run.
+Install Java JDK 21 and verify with:
 ```
-ssh -i your-key.pem ubuntu@your-ec2-public-ip
+java -version
 ```
-
-### 1.2 Install Java 
-```
-sudo apt update
-sudo apt install openjdk-17-jdk -y
-```
-
-### 1.3 Install Jenkins
-```
-curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
-  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
-
-sudo apt update
-sudo apt install jenkins -y
-```
-
-1.4 Start Jenkins
-```
-sudo systemctl start jenkins
-sudo systemctl enable jenkins
-```
+![](./img/1a.java.version.png)
 
 
-### 1.5 Open Jenkins on your Browser
 
-+ Go to http://your-ec2-public-ip:8080
+### 2: Install Jenkins On Windows
 
-+ You will see a Jenkins unlock screen.
++ Download Jenkins for Windows from https://www.jenkins.io/download/.
 
-+ Get the password from EC2:
++ Install it using the default settings.
+
++ Open Jenkins in your browser at http://localhost:8080.
+
++ Unlock Jenkins with the admin password found here:
 
 ```
-sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+type C:\Program Files\Jenkins\secrets\initialAdminPassword
 ```
 
-Paste the password into the browser.
+Install Suggested Plugins.
 
-Install recommended plugins.
+Create your admin user.
 
-Create Admin User (username and password).
+
+### 3:Install Helm
+Install Helm from https://helm.sh/docs/intro/install/.
+
+Confirm Helm is installed by running:
+```
+helm version
+```
+![](./img/1b.helm.version.png)
+
+---
+
+
+### 4: Find the Helm Binary Path
+Open PowerShell and run:
+```
+Get-Command helm | Select-Object -ExpandProperty Source
+```
+**Note: Copy this path for Jenkins pipeline.**
+
+
+### 5: Create Jenkins Pipeline Job
+
+#### 1: GitHub Credentials:
+
++ In Jenkins, go to Manage Jenkins → Credentials.
+
++ Add your GitHub username/password or token.
+
+
+#### 2. Create a New Pipeline:
+
++ In Jenkins, click New Item → Pipeline.
+
++ Name it **helm-webapp-deploy** and click OK.
+
+
+#### 3: Set Up Pipeline:
+
++ Scroll to the Pipeline Script section.
+
++ Add this pipeline script (update the Helm path to your system's path):
+
+
+```
+pipeline {
+    agent any
+
+    stages {
+        stage('Deploy with Helm') {
+            steps {
+                script {
+                    bat 'C:\\ProgramData\\chocolatey\\bin\helm.exe upgrade --install my-webapp ./webapp --namespace default'
+                }
+            }
+        }
+    }
+}
+```
+
+
+### **Step 4: Set Pipeline Source to Git**
+1. **Select "Pipeline script from SCM"**:
+   - In the **Definition** dropdown, choose **"Pipeline script from SCM"**. This tells Jenkins to pull the pipeline script directly from Git repository.
+
+
+2. **Choose SCM Type**:
+   - Select **Git** as the Source Code Management (SCM) system.
+
+3. **Enter Your Repository URL**:
+   - Paste GitHub repository URL (e.g., `https://github.com/username/repository.git`) into the **Repository URL** field.
+
+
+#### Note: you add Crendentials (4) if repo is private
+
+4. **Credentials**:
+   - If your repository is private:
+     - Click **Add** next to the **Credentials** field.
+     - Choose **Username and Password**, and provide your GitHub username and password (or personal access token if using two-factor authentication).
+   - Select the credentials you just added.
+
+
+5. **Branch to Build**:
+   - Under **Branches to build**, specify the branch you want Jenkins to use (`main`).
+
+
+### **Step 4: Save and Trigger the Pipeline**
+1. Click **Save** at the bottom of the configuration page.
+2. pipeline is now connected to Git!
+3. To test it:
+   - Make a code commit in your Git repository.
+   - Jenkins will detect the commit and automatically trigger the pipeline (if set up for automatic builds).
+
+
+
+
+---
+
+## 6: Update Helm Chart
+Edit values.yaml:
+
+Change the number of replicas:
+```
+replicaCount: 3
+```
+
+## 7: Edit templates/deployment.yaml:
+Update the resources section:
+```
+resources:
+  requests:
+    memory: "180Mi"
+    cpu: "120m"
+```
+
+
+## 8: Commit and Push Changes
+Run the following commands:
+
+```
+git add .
+git commit -m "Updated replicas, memory, and CPU requests"
+git push origin main
+```
+
+This will push the changes to GitHub.
+
 
 
 
 ## ✅ Conclusion
 
 This project shows how Helm can simplify Kubernetes application deployments through templated configuration and version-controlled charts. Helm does not only helps maintain consistency across environments but also empowers teams to deploy and manage applications at scale with confidence.
-
-
