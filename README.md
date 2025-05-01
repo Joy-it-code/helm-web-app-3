@@ -189,17 +189,30 @@ chmod +x
 http://<ec2-ip-address>:8080
 ```
 
-### Create and Generate kubeconfig for your cluster:
+###  Install kubectl and aws-iam-authenticator:
 ```
 aws configure
+sudo su - jenkins
+aws sts get-caller-identity
+
+# Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client
+kubectl get nodes
+
+
+# Install aws-iam-authenticator
 curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/latest/download/aws-iam-authenticator-linux-amd64
 chmod +x aws-iam-authenticator
 sudo mv aws-iam-authenticator /usr/local/bin/
+
 
 sudo mv aws-iam-authenticator /usr/local/bin
 aws eks list-clusters --region us-east-1
 aws eks describe-cluster --region us-east-1 --name my-eks-cluster --query "cluster.status
 aws eks update-kubeconfig --region <your-region> --name <cluster-name>
+aws eks --region <region> update-kubeconfig --name my-eks-cluster
 ```
 
 ### On AWS EC2 Instance 
@@ -208,7 +221,6 @@ aws eks update-kubeconfig --region <your-region> --name <cluster-name>
 sudo cat /var/log/jenkins/jenkins.log
 ```
 **Copy password and paste on browser**
-
 
 
 ### 5: Create Jenkins Pipeline Job
@@ -258,18 +270,26 @@ http://<your-EC2-public-IP>:8080/github-webhook/
 pipeline {
     agent any
 
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'
+    }
+
     stages {
         stage('Deploy with Helm') {
             steps {
-                script {
-                    sh 'helm upgrade --install my-webapp ./webapp --namespace default'
+                withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh '''
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        aws eks --region us-east-1 update-kubeconfig --name my-eks-cluster
+                        helm upgrade --install my-webapp ./webapp --namespace default
+                    '''
                 }
             }
         }
     }
 }
 ```
-
 
 ### **Step 4: Set Pipeline Source to Git**
 1. **Select "Pipeline script from SCM"**:
@@ -283,12 +303,10 @@ pipeline {
    - Paste GitHub repository URL (e.g., `https://github.com/username/repository.git`) into the **Repository URL** field.
 
 
-#### Note: you add Crendentials (4) if repo is private
-
 4. **Credentials**:
    - If your repository is private:
      - Click **Add** next to the **Credentials** field.
-     - Choose **Username and Password**, and provide your GitHub username and password (or personal access token if using two-factor authentication).
+     - Choose **Username and Password**, and provide your aws username and password .
    - Select the credentials you just added.
 
 
@@ -314,6 +332,7 @@ Change the number of replicas:
 ```
 replicaCount: 3
 ```
+
 
 ## 7: Edit templates/deployment.yaml:
 Update the resources section:
