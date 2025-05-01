@@ -90,24 +90,149 @@ Get-Command helm | Select-Object -ExpandProperty Source
 ```
 **Note: Copy this path for Jenkins pipeline.**
 
+## Create an AWS EC2 Instance (ubuntu)
+```
+ssh -i<ec2-ip-address>
+```
+
+
+### Install Helm:
+```
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+```
+
+### Verify:
+```
+helm version
+```
+
+### Install Kubernetes CLI (kubectl):
+
+This tool lets you interact with your Kubernetes cluster.
+
+```
+sudo apt update
+sudo snap install kubectl --classic
+```
+
+### Verify:
+```
+kubectl version --client
+```
+
+
+## Create a File:
+```
+nano jenkins.sh
+```
+
+**Paste**
+```
+#!/bin/bash
+
+# The jenkins & docker shell script that will run on instance initialization
+
+
+# Install jenkins and java
+sudo apt-get update
+sudo apt install openjdk-17-jre -y
+
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins -y
+
+
+# Install docker
+sudo apt-get install ca-certificates curl gnupg -y
+
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+
+# Add ubuntu & Jenkins to the Docker group
+sudo usermod -aG docker ubuntu
+sudo usermod -aG docker jenkins
+
+# run docker test container 
+sudo docker run hello-world
+
+# start & enable jenkins
+sudo systemctl start jenkins
+sudo systemctl enable jenkins
+```
+
+### Make it Executable and Run the Script:
+```
+chmod +x
+./jenkins.sh
+```
+
+### Open Jenkins on Browser:
+```
+http://<ec2-ip-address>:8080
+```
+
+
+### On AWS EC2 Instance 
++ Unlock Jenkins with the admin password found here:
+```
+sudo cat /var/log/jenkins/jenkins.log
+```
+**Copy password and paste on browser**
+
+
 
 ### 5: Create Jenkins Pipeline Job
 
-#### 1: GitHub Credentials:
+#### 1 : Configure Automatic Build Trigger
+Set Jenkins to automatically detect new commits in Git repository:
+
+**+ GitHub Webhook :**
+
++ Go to your GitHub repository settings.
+
++ Navigate to Webhooks → Add webhook.
+
++ Enter the URL for your Jenkins Git plugin:
+```
+http://<your-EC2-public-IP>:8080/github-webhook/
+```
+
++ Select Push events.
+
++ Save the webhook.
+
++ Jenkins will now trigger builds when you push code to your GitHub repository.
+
+
+
+#### 2: GitHub Credentials:
 
 + In Jenkins, go to Manage Jenkins → Credentials.
 
 + Add your GitHub username/password or token.
 
 
-#### 2. Create a New Pipeline:
+#### 3. Create a New Pipeline:
 
 + In Jenkins, click New Item → Pipeline.
 
 + Name it **helm-webapp-deploy** and click OK.
 
 
-#### 3: Set Up Pipeline:
+#### 4: Set Up Pipeline:
 
 + Scroll to the Pipeline Script section.
 
@@ -122,7 +247,7 @@ pipeline {
         stage('Deploy with Helm') {
             steps {
                 script {
-                    bat 'C:\\ProgramData\\chocolatey\\bin\helm.exe upgrade --install my-webapp ./webapp --namespace default'
+                    sh '/usr/local/bin/helm upgrade --install my-webapp ./webapp --namespace default'
                 }
             }
         }
@@ -162,7 +287,6 @@ pipeline {
 3. To test it:
    - Make a code commit in your Git repository.
    - Jenkins will detect the commit and automatically trigger the pipeline (if set up for automatic builds).
-
 
 
 
