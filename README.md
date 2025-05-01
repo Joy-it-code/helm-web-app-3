@@ -28,6 +28,7 @@ The goal is to automatically update and deploy the application every time new ch
 ## 📁 Project Structure
 ```
 helm-web-app/
+├── Jenkinsfile 
 ├── webapp/
 │   ├── Chart.yaml
 │   ├── values.yaml
@@ -168,6 +169,10 @@ sudo usermod -aG docker jenkins
 # run docker test container 
 sudo docker run hello-world
 
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
 # start & enable jenkins
 sudo systemctl start jenkins
 sudo systemctl enable jenkins
@@ -184,6 +189,18 @@ chmod +x
 http://<ec2-ip-address>:8080
 ```
 
+### Create and Generate kubeconfig for your cluster:
+```
+aws configure
+curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/latest/download/aws-iam-authenticator-linux-amd64
+chmod +x aws-iam-authenticator
+sudo mv aws-iam-authenticator /usr/local/bin/
+
+sudo mv aws-iam-authenticator /usr/local/bin
+aws eks list-clusters --region us-east-1
+aws eks describe-cluster --region us-east-1 --name my-eks-cluster --query "cluster.status
+aws eks update-kubeconfig --region <your-region> --name <cluster-name>
+```
 
 ### On AWS EC2 Instance 
 + Unlock Jenkins with the admin password found here:
@@ -234,11 +251,9 @@ http://<your-EC2-public-IP>:8080/github-webhook/
 
 #### 4: Set Up Pipeline:
 
-+ Scroll to the Pipeline Script section.
++ Create a Jenkinsfile:
 
-+ Add this pipeline script (update the Helm path to your system's path):
-
-
+**Paste**
 ```
 pipeline {
     agent any
@@ -247,7 +262,7 @@ pipeline {
         stage('Deploy with Helm') {
             steps {
                 script {
-                    sh '/usr/local/bin/helm upgrade --install my-webapp ./webapp --namespace default'
+                    sh 'helm upgrade --install my-webapp ./webapp --namespace default'
                 }
             }
         }
