@@ -344,6 +344,18 @@ resources:
 ```
 
 
+## Verify Build On Jenkins:
+![](./img/2a.successful.build.png)
+
+## Verify Helm Deployment:
+```
+helm list
+kubectl get nodes
+```
+![](./img/3a.helm.list.png)
+
+
+
 ## 8: Commit and Push Changes
 Run the following commands:
 
