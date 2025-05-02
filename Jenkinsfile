@@ -5,6 +5,10 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
     }
 
+    triggers {
+        githubPush() 
+    }
+
     stages {
         stage('Deploy with Helm') {
             steps {
