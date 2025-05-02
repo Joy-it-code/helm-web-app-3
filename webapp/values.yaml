@@ -6,7 +6,7 @@
 replicaCount: 3
 
 image:
-  repository: my-webapp
+  repository: joanna2/my-webapp
   tag: latest
   pullPolicy: IfNotPresent
 

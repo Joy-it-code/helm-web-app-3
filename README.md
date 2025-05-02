@@ -29,6 +29,7 @@ The goal is to automatically update and deploy the application every time new ch
 ```
 helm-web-app/
 ├── Jenkinsfile 
+├── Dockerfile
 ├── webapp/
 │   ├── Chart.yaml
 │   ├── values.yaml
@@ -122,6 +123,70 @@ kubectl version --client
 ```
 
 
+### Create a Dockerfile
+```
+# Use Nginx as the base image
+FROM nginx:stable
+
+# Copy your web app files into the Nginx HTML directory
+COPY . /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+###  Install Docker on the AWS EC2 Instance
+```
+sudo apt update
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+```
+**Then logout and back in**
+
+### Create Dockerfile
+```
+docker login -u username -p password
+nano Dockerfile
+```
+```
+# Use Nginx as the base image
+FROM nginx:stable
+
+# Copy your web app files into the Nginx HTML directory
+COPY . /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### Create .dockerignore File
+Paste
+```
+*.tar
+*.zip
+*.log
+node_modules
+.vscode
+.git
+*.lz4
+```
+
+
+```
+docker build -t <your-dockerhub-username>/<your-image-name>:<tag> .
+docker push <your-dockerhub-username>/<your-image-name>:<tag> 
+```
+
+
+
 ## Create a File:
 ```
 nano jenkins.sh
@@ -198,6 +263,7 @@ aws sts get-caller-identity
 # Install kubectl
 curl -LO "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+chmod +x kubectl
 kubectl version --client
 kubectl get nodes
 
