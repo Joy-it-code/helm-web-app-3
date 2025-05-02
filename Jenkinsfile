@@ -21,9 +21,8 @@ pipeline {
 
         stage('Deploy with Helm') {
             when {
-                anyOf {
-                    branch 'main'
-                    
+                expression {
+                env.GIT_BRANCH == 'origin/main'
                 }
             }
             steps {

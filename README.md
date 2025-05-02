@@ -290,14 +290,13 @@ pipeline {
 
         stage('Deploy with Helm') {
             when {
-                anyOf {
-                    branch 'main'
-                    
+                expression {
+                env.GIT_BRANCH == 'origin/main'
                 }
             }
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'aws-creds',
+                    credentialsId: 'aws-cred',
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
