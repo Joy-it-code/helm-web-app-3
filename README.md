@@ -274,8 +274,30 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
     }
 
+    options {
+        skipDefaultCheckout(true) // Prevents checkout unless you define it explicitly
+    }
+
     stages {
+        stage('Checkout') {
+            when {
+                anyOf {
+                    branch 'main'
+                
+                }
+            }
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Deploy with Helm') {
+            when {
+                anyOf {
+                    branch 'main'
+                   
+                }
+            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     sh '''
@@ -290,6 +312,7 @@ pipeline {
     }
 }
 ```
+
 
 ### **Step 4: Set Pipeline Source to Git**
 1. **Select "Pipeline script from SCM"**:
@@ -354,6 +377,12 @@ kubectl get nodes
 ```
 ![](./img/3a.helm.list.png)
 
+
+## Verify Deployed Application:
+```
+kubectl get svc
+```
+![](./img/3b.svc.png)
 
 
 ## 8: Commit and Push Changes
