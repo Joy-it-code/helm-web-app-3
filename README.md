@@ -2,10 +2,14 @@
 
 ## 📚 Project Overview
 
-This project demonstrates how to set up a CI/CD pipeline using Jenkins to automate the deployment of a Kubernetes application managed through Helm charts.
+This project demonstrates how to set up a CI/CD pipeline using Jenkins to automate the deployment of a Kubernetes application managed through Helm charts.  
+It contains the complete infrastructure and application setup for deploying a web application on **Amazon Elastic Kubernetes Service (EKS)** using **Terraform**, **Helm**, and **Jenkins**, all managed from **VSCode**.
+
 The goal is to automatically update and deploy the application every time new changes are pushed to a Git repository.
 
+
 ---
+
 
 
 
@@ -50,6 +54,10 @@ helm-web-app/
 
 
 ## 📥 Step-by-Step Setup
+```
+cd YOUR_REPO_NAME
+```
+
 
 ### 1: Install Java
 
@@ -100,6 +108,7 @@ Get-Command helm | Select-Object -ExpandProperty Source
 ```
 **Note: Copy this path for Jenkins pipeline.**
 
+
 ## Create an AWS EC2 Instance (ubuntu)
 ```
 ssh -i<ec2-ip-address>
@@ -118,7 +127,7 @@ helm version
 
 ### Install Kubernetes CLI (kubectl):
 
-This tool lets you interact with your Kubernetes cluster.
+This tool helps to interact with your Kubernetes cluster.
 
 ```
 sudo apt update
@@ -132,6 +141,7 @@ kubectl version --client
 
 
 ### Create a .gitignore File
+
 ```
 *.tgz
 .helm/
@@ -170,6 +180,7 @@ override.tf.json
 
 
 ### Create a Dockerfile
+
 ```
 # Use Nginx as the base image
 FROM nginx:stable
@@ -225,6 +236,7 @@ node_modules
 *.lz4
 ```
 
+## On The Instance Run:
 
 ```
 docker build -t <your-dockerhub-username>/<your-image-name>:<tag> .
@@ -232,12 +244,10 @@ docker push <your-dockerhub-username>/<your-image-name>:<tag>
 ```
 
 
-
 ## Create a File:
 ```
 nano jenkins.sh
 ```
-
 **Paste**
 ```
 #!/bin/bash
@@ -563,6 +573,22 @@ pipeline {
    - Select the credentials you just added.
 
 
+## Docker Hub Credentials
+**In Jenkins, go to Manage Jenkins > Credentials > (your domain).**
+
++ Add a new Username and Password credential:
+
++ **ID:** dockerhub-cred (must match your Jenkinsfile).
+
++ **Username:** Your Docker Hub username.
+
++ **Password:** Your Docker Hub password or token.
+
++ **Scope:** Global.
+
+**Also add Docker hub credentials to Jenkins**
+
+
 5. **Branch to Build**:
    - Under **Branches to build**, specify the branch you want Jenkins to use (`main`).
 
@@ -596,6 +622,28 @@ resources:
     cpu: "120m"
 ```
 
+## Deploy a Test App:
+verify that the cluster is working by deploying a sample NGINX app:
+```
+kubectl create deployment nginx --image=nginx
+kubectl expose deployment nginx --port=80 --type=LoadBalancer
+kubectl get svc nginx
+```
+![](./img/4b.create.deploymt.get.pods.png)
+
+
+
+## 8: Commit and Push Changes
+Run the following commands:
+
+```
+git add .
+git commit -m "Updated replicas, memory, and CPU requests"
+git push origin main
+```
+
+This will push the changes to GitHub.
+
 
 ## Verify Build On Jenkins:
 ![](./img/2a.successful.build.png)
@@ -612,23 +660,83 @@ kubectl get nodes
 ```
 kubectl get svc
 ```
-![](./img/3b.svc.png)
+![](./img/3c.svc.png)
 
 
-## 8: Commit and Push Changes
-Run the following commands:
 
+## Check Cluster Resources (confirm everything is running):
 ```
-git add .
-git commit -m "Updated replicas, memory, and CPU requests"
-git push origin main
+kubectl get pods --all-namespaces
+kubectl get svc --all-namespaces
+```
+![](./img/4c.kubectl.get.pod.png)
+![](./img/4d.get.deployment.png)
+
+
+## Focused Checks
+```
+kubectl get pods -n default
+kubectl get svc -n default
+kubectl get deployments -n default
+```
+![](./img/4e.focus.checked.png)
+
+
+## 🚀 Test nginx App On Browser: 
+Open your browser and navigate to:
+```
+http://a85b563ea2c524aeda7a79e5c8875d49-182807478.us-east-1.elb.amazonaws.com
+```
+![](./img/5b.nginx.browser.png)
+
+
+## Make my-webapp Accessible:
+Change the Service type to LoadBalancer
+```
+kubectl edit svc my-webapp
 ```
 
-This will push the changes to GitHub.
+
+## Change Spec to
+```
+spec:
+  type: LoadBalancer
+```
 
 
+## Get External IP:
+```
+kubectl get svc my-webapp
+```
+![](./img/5a.get.svc.app.png)
+
+## Test app on Browser:
+```
+http://<your-external-ip>
+```
+![](./img/6a.webapp.on.browser.png)
+
+## Clean Up terraform Resources:
+```
+terraform destroy
+```
 
 
 ## ✅ Conclusion
 
-This project shows how Helm can simplify Kubernetes application deployments through templated configuration and version-controlled charts. Helm does not only helps maintain consistency across environments but also empowers teams to deploy and manage applications at scale with confidence.
+This project demonstrates a full-stack, automated deployment pipeline using modern DevOps tools. I provisioned infrastructure with Terraform, deploy with Helm, and manage CI/CD via Jenkins — all within a developer-friendly VSCode environment.
+
+
+### Push to GitHub
+```
+git add .
+git commit -m "updated file"
+git push origin main
+```
+
+
+### 🧑‍💻 Author
+
+### Your Name: Joy Nwatuzor
+
+### 🎉 Happy DevOps-ing and Helming!
