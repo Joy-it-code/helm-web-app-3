@@ -35,6 +35,14 @@ helm-web-app/
 │   ├── values.yaml
 │   └── templates/
 │       └── deployment.yaml
+├── terraform/
+│   ├── main.tf
+│   ├── provider.tf
+│   ├── vpc.tf
+│   ├── eks.tf
+│   ├── outputs.tf
+│   └── variables.tf
+└── .gitignore
 ```
 
 ---
@@ -121,6 +129,44 @@ sudo snap install kubectl --classic
 ```
 kubectl version --client
 ```
+
+
+### Create a .gitignore File
+```
+*.tgz
+.helm/
+.helmignore
+.kube/
+*.log
+# OS-generated files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+secrets.yaml
+*.secret.yaml
+.env
+*.env.*
+node_modules/
+venv/
+__pycache__/
+*.bak
+*.tmp
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+```
+
 
 
 ### Create a Dockerfile
@@ -281,6 +327,103 @@ aws eks update-kubeconfig --region <your-region> --name <cluster-name>
 aws eks --region <region> update-kubeconfig --name my-eks-cluster
 ```
 
+
+
+
+### Create an EKS Cluster Using Terraform
+On Terminal:
+
+Configure AWS CLI
+```
+aws configure
+```
+
+**provider.tf**
+```
+provider "aws" {
+  region = "us-east-1"
+}
+```
+
+**vpc.tf**
+```
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.1.1" 
+
+  name = "eks-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.3.0/24", "10.0.4.0/24"]
+
+  enable_nat_gateway = true
+  single_nat_gateway = true
+
+  tags = {
+    Name        = "eks-vpc"
+    Environment = "dev"
+  }
+}
+```
+
+**output.tf**
+```
+output "cluster_name" {
+  value = module.eks.cluster_name
+}
+
+output "kubeconfig_command" {
+  value = "aws eks --region us-east-1 update-kubeconfig --name ${module.eks.cluster_name}"
+}
+```
+
+
+**variable.tf**
+```
+variable "region" {
+  default = "us-east-1"
+}
+```
+
+
+
+### Initialize Terraform
+After the above steps, run:
+```
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+#### Update kubeconfig:
+```
+aws eks --region us-east-1 update-kubeconfig --name my-eks-cluster
+```
+
+### Check cluster nodes:
+```
+kubectl get nodes
+```
+![](./img/4a.kubectl.png)
+
+
+
+### Test a deployment (e.g., NGINX):
+```
+kubectl create deployment nginx --image=nginx
+kubectl expose deployment nginx --port=80 --type=LoadBalancer
+```
+![](./img/4b.create.deploymt.get.pods.png)
+
+
+### Check pod status:
+```
+kubectl get pods
+```
+
 ### On AWS EC2 Instance 
 + Unlock Jenkins with the admin password found here:
 ```
@@ -339,6 +482,7 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
+        DOCKERHUB_IMAGE = 'joanna2/my-webapp:latest'
     }
 
     triggers {
@@ -346,6 +490,30 @@ pipeline {
     }
 
     stages {
+        stage('Build and Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-cred',
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )]) {
+                    sh '''
+                        echo "🔧 Building Docker image..."
+                        docker build -t $DOCKERHUB_IMAGE .
+
+                        echo "🔐 Logging in to Docker Hub..."
+                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+
+                        echo "📤 Pushing image to Docker Hub..."
+                        docker push $DOCKERHUB_IMAGE
+
+                        echo "🧹 Cleaning up local image..."
+                        docker rmi $DOCKERHUB_IMAGE || true
+                    '''
+                }
+            }
+        }
+
         stage('Deploy with Helm') {
             when {
                 expression {
@@ -361,7 +529,11 @@ pipeline {
                     sh '''
                         export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
                         export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+                        echo "🧭 Configuring access to EKS..."
                         aws eks --region ${AWS_DEFAULT_REGION} update-kubeconfig --name my-eks-cluster
+
+                        echo "🚀 Deploying to EKS with Helm..."
                         helm upgrade --install my-webapp ./webapp --namespace default
                     '''
                 }

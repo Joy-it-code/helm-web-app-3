@@ -34,3 +34,16 @@ __pycache__/
 # Temporary files
 *.bak
 *.tmp
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*.tfstate.backup
+.terraform.lock.hcl
