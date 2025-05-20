@@ -1,6 +1,6 @@
-# 🚀 Integrating Helm with CI/CD using Jenkins
+# Integrating Helm with CI/CD using Jenkins
 
-## 📚 Project Overview
+##  Project Overview
 
 This project demonstrates how to set up a CI/CD pipeline using Jenkins to automate the deployment of a Kubernetes application managed through Helm charts.  
 It contains the complete infrastructure and application setup for deploying a web application on **Amazon Elastic Kubernetes Service (EKS)** using **Terraform**, **Helm**, and **Jenkins**, all managed from **VSCode**.
@@ -13,7 +13,7 @@ The goal is to automatically update and deploy the application every time new ch
 
 
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 + A computer system
 
@@ -21,7 +21,7 @@ The goal is to automatically update and deploy the application every time new ch
 
 + Helm installed on your system
 
-+ Kubernetes cluster ready (e.g., Minikube)
++ Kubernetes cluster ready 
 
 + Jenkins installed on your system
 
@@ -29,7 +29,7 @@ The goal is to automatically update and deploy the application every time new ch
 
 
 
-## 📁 Project Structure
+##  Project Structure
 ```
 helm-web-app/
 ├── Jenkinsfile 
@@ -53,63 +53,12 @@ helm-web-app/
 
 
 
-## 📥 Step-by-Step Setup
+## Step-by-Step Setup
 ```
 cd YOUR_REPO_NAME
 ```
 
-
-### 1: Install Java
-
-Jenkins requires Java to run.
-Install Java JDK 21 and verify with:
-```
-java -version
-```
-![](./img/1a.java.version.png)
-
-
-
-### 2: Install Jenkins On Windows
-
-+ Download Jenkins for Windows from https://www.jenkins.io/download/.
-
-+ Install it using the default settings.
-
-+ Open Jenkins in your browser at http://localhost:8080.
-
-+ Unlock Jenkins with the admin password found here:
-
-```
-type C:\Program Files\Jenkins\secrets\initialAdminPassword
-```
-
-Install Suggested Plugins.
-
-Create your admin user.
-
-
-### 3:Install Helm
-Install Helm from https://helm.sh/docs/intro/install/.
-
-Confirm Helm is installed by running:
-```
-helm version
-```
-![](./img/1b.helm.version.png)
-
----
-
-
-### 4: Find the Helm Binary Path
-Open PowerShell and run:
-```
-Get-Command helm | Select-Object -ExpandProperty Source
-```
-**Note: Copy this path for Jenkins pipeline.**
-
-
-## Create an AWS EC2 Instance (ubuntu)
+## 1: Create an AWS EC2 Instance (ubuntu)
 ```
 ssh -i<ec2-ip-address>
 ```
@@ -305,10 +254,7 @@ chmod +x
 ./jenkins.sh
 ```
 
-### Open Jenkins on Browser:
-```
-http://<ec2-ip-address>:8080
-```
+
 
 ###  Install kubectl and aws-iam-authenticator:
 ```
@@ -434,12 +380,22 @@ kubectl expose deployment nginx --port=80 --type=LoadBalancer
 kubectl get pods
 ```
 
+
+
+
+### Open Jenkins on Browser:
+```
+http://<ec2-ip-address>:8080
+```
+
 ### On AWS EC2 Instance 
 + Unlock Jenkins with the admin password found here:
 ```
 sudo cat /var/log/jenkins/jenkins.log
 ```
 **Copy password and paste on browser**
+
++ Install necessary plugins
 
 
 ### 5: Create Jenkins Pipeline Job
@@ -508,16 +464,16 @@ pipeline {
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sh '''
-                        echo "🔧 Building Docker image..."
+                        echo " Building Docker image..."
                         docker build -t $DOCKERHUB_IMAGE .
 
-                        echo "🔐 Logging in to Docker Hub..."
+                        echo " Logging in to Docker Hub..."
                         echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
 
-                        echo "📤 Pushing image to Docker Hub..."
+                        echo " Pushing image to Docker Hub..."
                         docker push $DOCKERHUB_IMAGE
 
-                        echo "🧹 Cleaning up local image..."
+                        echo " Cleaning up local image..."
                         docker rmi $DOCKERHUB_IMAGE || true
                     '''
                 }
@@ -540,10 +496,10 @@ pipeline {
                         export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
                         export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
-                        echo "🧭 Configuring access to EKS..."
+                        echo "Configuring access to EKS..."
                         aws eks --region ${AWS_DEFAULT_REGION} update-kubeconfig --name my-eks-cluster
 
-                        echo "🚀 Deploying to EKS with Helm..."
+                        echo "Deploying to EKS with Helm..."
                         helm upgrade --install my-webapp ./webapp --namespace default
                     '''
                 }
@@ -682,7 +638,7 @@ kubectl get deployments -n default
 ![](./img/4e.focus.checked.png)
 
 
-## 🚀 Test nginx App On Browser: 
+## Test nginx App On Browser: 
 Open your browser and navigate to:
 ```
 http://a85b563ea2c524aeda7a79e5c8875d49-182807478.us-east-1.elb.amazonaws.com
@@ -722,7 +678,7 @@ terraform destroy
 ```
 
 
-## ✅ Conclusion
+## Conclusion
 
 This project demonstrates a full-stack, automated deployment pipeline using modern DevOps tools. I provisioned infrastructure with Terraform, deploy with Helm, and manage CI/CD via Jenkins — all within a developer-friendly VSCode environment.
 
