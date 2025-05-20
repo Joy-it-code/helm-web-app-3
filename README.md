@@ -128,7 +128,7 @@ override.tf.json
 
 
 
-### Create a Dockerfile
+### 2: Create a Dockerfile
 
 ```
 # Use Nginx as the base image
@@ -193,7 +193,7 @@ docker push <your-dockerhub-username>/<your-image-name>:<tag>
 ```
 
 
-## Create a File:
+## 3: Create a File:
 ```
 nano jenkins.sh
 ```
@@ -286,7 +286,7 @@ aws eks --region <region> update-kubeconfig --name my-eks-cluster
 
 
 
-### Create an EKS Cluster Using Terraform
+### 4: Create an EKS Cluster Using Terraform
 On Terminal:
 
 Configure AWS CLI
