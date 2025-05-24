@@ -448,7 +448,11 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
-        DOCKERHUB_IMAGE = 'joanna2/my-webapp:latest'
+        ECR_REGISTRY = '<account-id>.dkr.ecr.us-east-1.amazonaws.com'
+        IMAGE_NAME = 'my-webapp'
+        IMAGE_TAG = 'latest'
+        FULL_IMAGE_NAME = "${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+        EKS_CLUSTER_NAME = 'my-eks-cluster'
     }
 
     triggers {
@@ -456,52 +460,55 @@ pipeline {
     }
 
     stages {
-        stage('Build and Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-cred',
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
-                )]) {
-                    sh '''
-                        echo " Building Docker image..."
-                        docker build -t $DOCKERHUB_IMAGE .
-
-                        echo " Logging in to Docker Hub..."
-                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-
-                        echo " Pushing image to Docker Hub..."
-                        docker push $DOCKERHUB_IMAGE
-
-                        echo " Cleaning up local image..."
-                        docker rmi $DOCKERHUB_IMAGE || true
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy with Helm') {
-            when {
-                expression {
-                    env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'origin/develop'
-                }
-            }
+        stage('Build and Push to ECR') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'aws-cred',
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
-                    sh '''
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                    withEnv(["AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}"]) {
+                        sh '''
+                            echo "Checking AWS identity..."
+                            aws sts get-caller-identity
 
-                        echo "Configuring access to EKS..."
-                        aws eks --region ${AWS_DEFAULT_REGION} update-kubeconfig --name my-eks-cluster
+                            echo "Logging into ECR..."
+                            aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
+                                docker login --username AWS --password-stdin $ECR_REGISTRY
 
-                        echo "Deploying to EKS with Helm..."
-                        helm upgrade --install my-webapp ./webapp --namespace default
-                    '''
+                            echo "Building Docker image..."
+                            docker build -t $FULL_IMAGE_NAME .
+
+                            echo "Pushing Docker image to ECR..."
+                            docker push $FULL_IMAGE_NAME
+
+                            echo "Cleaning up local image..."
+                            docker rmi $FULL_IMAGE_NAME || true
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy with Helm to EKS') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-cred',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    withEnv(["AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}"]) {
+                        sh '''
+                            echo "Configuring access to EKS..."
+                            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $EKS_CLUSTER_NAME
+
+                            echo "Deploying with Helm..."
+                            helm upgrade --install my-webapp ./webapp \
+                                --set image.repository=$ECR_REGISTRY/$IMAGE_NAME \
+                                --set image.tag=$IMAGE_TAG \
+                                --namespace default
+                        '''
+                    }
                 }
             }
         }
